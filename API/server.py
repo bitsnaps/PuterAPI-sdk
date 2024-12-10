@@ -1,17 +1,29 @@
-from flask import Flask, jsonify, request, send_file
-from flask_cors import CORS
-import requests
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+from typing import List, Optional
 from io import BytesIO
+import requests
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
 
-app = Flask(__name__)
-CORS(app)
+app = FastAPI()
 
-url = 'https://api.puter.com/drivers/call'
-headers = {
+# CORS configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Constants
+API_URL = 'https://api.puter.com/drivers/call'
+HEADERS = {
     'Accept': '*/*',
     'Accept-Language': 'en-US,en;q=0.9',
     'Authorization': f"Bearer {os.getenv('API_TOKEN')}",
@@ -22,10 +34,22 @@ headers = {
     'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
 }
 
-conversation_history = []
+# Models
+class Message(BaseModel):
+    message: str
 
-def mowhn(message):
+class ChatResponse(BaseModel):
+    response: str
+
+class TTSRequest(BaseModel):
+    text: str
+
+# Store conversation history
+conversation_history: List[dict] = []
+
+async def chat_completion(message: str) -> str:
     conversation_history.append({"content": message})
+    
     data = {
         "interface": "puter-chat-completion",
         "driver": "openai-completion",
@@ -35,50 +59,46 @@ def mowhn(message):
         }
     }
 
-    response = requests.post(url, headers=headers, json=data)
-
-    if response.status_code == 200:
+    try:
+        response = requests.post(API_URL, headers=HEADERS, json=data)
+        response.raise_for_status()
+        
         response_json = response.json()
         if response_json.get("success"):
             bot_reply = response_json['result']['message']['content']
             conversation_history.append({"content": bot_reply, "role": "assistant"})
             return bot_reply
-        return "Failed to get a valid response from the API."
-    return f"Request failed with status code {response.status_code}"
+        raise HTTPException(status_code=500, detail="Failed to get a valid response from the API")
+    
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"API request failed: {str(e)}")
 
-def puter(user_text):
+async def text_to_speech(text: str) -> Optional[BytesIO]:
     data = {
         "interface": "puter-tts",
         "driver": "aws-polly",
         "method": "synthesize",
         "args": {
-            "text": user_text
+            "text": text
         }
     }
 
-    response = requests.post(url, json=data, headers=headers)
-
-    if response.status_code == 200:
+    try:
+        response = requests.post(API_URL, json=data, headers=HEADERS)
+        response.raise_for_status()
         return BytesIO(response.content)
-    return None
+    
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"TTS generation failed: {str(e)}")
 
-@app.route('/chat', methods=['POST'])
-def chat():
-    user_input = request.json.get('message')
-    if user_input:
-        bot_response = mowhn(user_input)
-        return jsonify({'response': bot_response})
-    return jsonify({'error': 'No message provided'}), 400
+@app.post("/chat", response_model=ChatResponse)
+async def chat_endpoint(message: Message):
+    if not message.message.strip():
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+    
+    response = await chat_completion(message.message)
+    return ChatResponse(response=response)
 
-@app.route('/tts', methods=['POST'])
-def tts():
-    user_text = request.json.get('text')
-    if user_text:
-        audio_data = puter(user_text)
-        if audio_data:
-            return send_file(audio_data, mimetype='audio/mp3', as_attachment=False)
-        return jsonify({'error': 'Failed to generate TTS'}), 500
-    return jsonify({'error': 'No text provided'}), 400
-
-if __name__ == '__main__':
-    app.run(debug=True)
+@app.post("/tts")
+async def tts_endpoint(request: TTSRequest):
+    if not request.text.strip():
