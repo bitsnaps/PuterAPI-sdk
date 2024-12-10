@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PuterAI SDK Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #chat-response {
+            margin-top: 10px;
+            padding: 10px;
+            border-left: 4px solid #007bff;
+            background-color: #f8f9fa;
+        }
+        .error {
+            color: #dc3545;
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #dc3545;
+            background-color: #f8d7da;
+        }
+        audio {
+            width: 100%;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PuterAI Chat</h1>
+        <div>
+            <textarea id="user-input" rows="4" placeholder="Type your message here"></textarea>
+            <button onclick="sendMessage()" id="send-btn">Send Message</button>
+        </div>
+        <h2>Response</h2>
+        <div id="chat-response"></div>
+    </div>
+
+    <div class="container">
+        <h1>Text to Speech</h1>
+        <div>
+            <textarea id="tts-input" rows="4" placeholder="Type text to convert to speech"></textarea>
+            <button onclick="generateTTS()" id="tts-btn">Generate TTS</button>
+        </div>
+        <h2>Audio Player</h2>
+        <audio id="audio-player" controls></audio>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+
+        async function sendMessage() {
+            const messageInput = document.getElementById('user-input');
+            const sendButton = document.getElementById('send-btn');
+            const responseDiv = document.getElementById('chat-response');
+
+            try {
+                sendButton.disabled = true;
+                const message = messageInput.value.trim();
+                
+                if (!message) {
+                    throw new Error('Please enter a message');
+                }
+
+                const response = await fetch(`${API_URL}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to get response');
+                }
+
+                const data = await response.json();
+                responseDiv.innerHTML = `<strong>Bot:</strong> ${data.response}`;
+                messageInput.value = '';
+            } catch (error) {
+                responseDiv.innerHTML = `<div class="error">${error.message}</div>`;
+            } finally {
+                sendButton.disabled = false;
+            }
+        }
+
+        async function generateTTS() {
+            const textInput = document.getElementById('tts-input');
+            const ttsButton = document.getElementById('tts-btn');
+            const audioPlayer = document.getElementById('audio-player');
+
+            try {
+                ttsButton.disabled = true;
+                const text = textInput.value.trim();
+
+                if (!text) {
+                    throw new Error('Please enter text for TTS');
+                }
+
+                const response = await fetch(`${API_URL}/tts`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to generate audio');
+                }
+
+                const audioBlob = await response.blob();
+                const audioUrl = URL.createObjectURL(audioBlob);
+                audioPlayer.src = audioUrl;
+                audioPlayer.play();
+                textInput.value = '';
+            } catch (error) {
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error';
+                errorDiv.textContent = error.message;
+                audioPlayer.parentElement.insertBefore(errorDiv, audioPlayer);
+                setTimeout(() => errorDiv.remove(), 5000);
+            } finally {
+                ttsButton.disabled = false;
+            }
+        }
+
+        // Handle Enter key in textareas
+        document.getElementById('user-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        document.getElementById('tts-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                generateTTS();
+            }
+        });
+    </script>
+</body>
+</html>
