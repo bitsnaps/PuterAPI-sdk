@@ -42,14 +42,14 @@ class PuterAuth:
     @staticmethod
     def save_token(token: str) -> None:
         env_path = Path('.env')
-        content = f"PUTER_API_KEY={token}\n"
+        content = f"API_TOKEN={token}\n"
         
         if env_path.exists():
             with open(env_path, 'r') as f:
                 lines = f.readlines()
                 
-            # Remove existing PUTER_API_KEY line if exists
-            lines = [line for line in lines if not line.startswith('PUTER_API_KEY=')]
+            # Check for existing token if exists
+            lines = [line for line in lines if not line.startswith('API_TOKEN=')]
             lines.append(content)
             
             with open(env_path, 'w') as f:

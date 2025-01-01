@@ -80,13 +80,14 @@
     </div>
 
     <script>
-        const API_URL = 'http://localhost:8000';
-
+        const API_URL = 'http://127.0.0.1:8000';
+		
+		const textInput = document.getElementById('tts-input');
+		
         async function sendMessage() {
             const messageInput = document.getElementById('user-input');
             const sendButton = document.getElementById('send-btn');
             const responseDiv = document.getElementById('chat-response');
-
             try {
                 sendButton.disabled = true;
                 const message = messageInput.value.trim();
@@ -110,6 +111,7 @@
 
                 const data = await response.json();
                 responseDiv.innerHTML = `<strong>Bot:</strong> ${data.response}`;
+				textInput.value = data.response;
                 messageInput.value = '';
             } catch (error) {
                 responseDiv.innerHTML = `<div class="error">${error.message}</div>`;
@@ -119,7 +121,6 @@
         }
 
         async function generateTTS() {
-            const textInput = document.getElementById('tts-input');
             const ttsButton = document.getElementById('tts-btn');
             const audioPlayer = document.getElementById('audio-player');
 
