@@ -1,6 +1,6 @@
 # PuterAI-Python SDK
 
-**Note**: This is a quick for on [mowhn/PuterAi-python_SDK]'s work, I just made it easier and clean it bit and using FastAPI instead of Flask.
+**Note**: This is a quick fork on [mowhn](https://github.com/mowhn/PuterAi-python_SDK)'s work, I just made it easier and clean it bit and using FastAPI instead of Flask.
 
 PuterAI Python SDK provides a simple way to interact with the Puter AI API for chatbot interactions and text-to-speech (TTS) generation. This SDK allows you to integrate chatbot and TTS functionalities into your own applications.
 
@@ -64,8 +64,7 @@ To quickly obtain your `API_TOKEN`, you must first run `login.py` to log in and 
 
   **Note**:
   - If you don't have a Puter AI account, you can sign up at <a href="https://puter.com/?r=N5Y0ZYTF" target="_blank">
-  <img src="https://img.shields.io/badge/Sign/Up/for/PuterAI-Click/Here-brightgreen" alt="Sign Up for PuterAI" />
-  - P.S. This is my referral link, so we'll both get +1 Gb free space.
+  <img src="https://img.shields.io/badge/Sign/Up/for/PuterAI-Click/Here-brightgreen" alt="Sign Up for PuterAI" /> (This is my referral link, so we'll both get +1Gb extra free space).
   
 </a>
 
